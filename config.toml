@@ -1,0 +1,46 @@
+# Nordic Hydro Model: parameters for NO2.
+# Everything the model assumes lives here, so a scenario is a config change.
+
+[reservoir]
+capacity_gwh = 34043.6      # NVE magasinstatistikk, NO2
+max_release_gwh = 1442.0    # highest weekly reservoir production observed (ENTSO-E B12)
+
+[market]
+voll_eur_mwh = 3000.0       # value of lost load
+discount_rate = 0.05        # annual
+cable_availability = 0.87   # share of nameplate usable as a weekly average
+
+# Interconnectors from NO2 to the continent (MW, export / import, start date).
+# Internal links to NO1 and NO5 are taken as given from data.
+[[cables]]
+name = "Skagerrak 1-4 (DK1)"
+export_mw = 1632
+import_mw = 1632
+start = "1976-01-01"
+
+[[cables]]
+name = "NorNed (NL)"
+export_mw = 700
+import_mw = 700
+start = "2008-05-01"
+
+[[cables]]
+name = "NordLink (DE)"
+export_mw = 1400
+import_mw = 1400
+start = "2020-12-09"
+
+[[cables]]
+name = "North Sea Link (GB)"
+export_mw = 1400
+import_mw = 1400
+start = "2021-10-01"
+
+[grid]
+n_storage = 101
+n_release = 81
+n_release_sim = 401
+cycles = 4
+
+[scenarios]
+inflow_years = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
