@@ -51,3 +51,25 @@ def test_isolated_wet_system_prices_below_german():
     sim = simulate(V, Q[0] * 1.5, price, d, xmax, imax, s0=30000.0, p=p, n_release=121)
     assert (sim["price"] <= sim["price_de"] + 1e-9).all()
     assert (sim["regime"] == "export_limit").any()
+
+
+def test_zero_risk_weight_is_the_plain_mean():
+    from nhm.sdp import _risk_expectation
+    vals = np.array([[1.0, 2.0, 3.0, 10.0]])
+    p = Params(smax=1.0, rmax=1.0, risk_weight=0.0)
+    assert np.isclose(_risk_expectation(vals, p)[0], 4.0)
+    p = Params(smax=1.0, rmax=1.0, risk_weight=1.0, cvar_alpha=0.5)
+    assert np.isclose(_risk_expectation(vals, p)[0], 1.5)  # mean of the worst two
+
+
+def test_minimum_curve_keeps_more_water_in_a_dry_year():
+    Q, price, d, xmax, imax, p = _setup()
+    dry = Q[0] * 0.6
+    V0 = solve(Q, price, d, xmax, imax, p, cycles=3)
+    neutral = simulate(V0, dry, price, d, xmax, imax, s0=15000.0, p=p, n_release=121)
+    p_risk = Params(smax=p.smax, rmax=p.rmax, n_storage=p.n_storage, n_release=p.n_release,
+                    min_fill_penalty=100.0, min_fill=np.full(W, 12000.0))
+    V1 = solve(Q, price, d, xmax, imax, p_risk, cycles=3)
+    averse = simulate(V1, dry, price, d, xmax, imax, s0=15000.0, p=p_risk, n_release=121)
+    assert averse["storage_end"].min() >= neutral["storage_end"].min()
+    assert averse["storage_end"].mean() > neutral["storage_end"].mean()

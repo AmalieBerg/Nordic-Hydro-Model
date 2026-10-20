@@ -44,3 +44,13 @@ cycles = 4
 
 [scenarios]
 inflow_years = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+
+# Risk aversion in layer 1. Calibrated on 2020-2022, evaluated on 2023-2025
+# (see results/risk_calibration.csv). The soft minimum filling curve does
+# most of the work; the CVaR tilt alone made the model hoard too much water.
+[risk]
+cvar_weight = 0.0           # 0 = plain expectation over inflow scenarios
+cvar_alpha = 0.2            # tail share used when cvar_weight > 0
+min_fill_penalty = 100.0    # EUR/MWh per MWh below the curve
+min_fill_quantile = 0.05    # curve = 5th percentile of weekly filling ...
+min_fill_years = [1995, 2015]  # ... in NVE history before the scenario years

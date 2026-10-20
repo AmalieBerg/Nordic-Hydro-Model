@@ -28,7 +28,20 @@ def load_config(path: str | Path) -> dict:
         return tomllib.load(f)
 
 
-def params_from_config(cfg: dict) -> Params:
+def min_fill_curve(nve_path: str | Path, years: tuple[int, int], quantile: float, smax: float) -> np.ndarray:
+    """Seasonal minimum filling (GWh by week) from NVE history.
+
+    Uses only years before the inflow scenarios start, so the curve is
+    not fitted to the period the backtest evaluates.
+    """
+    n = pd.read_csv(nve_path)
+    n = n[(n["iso_aar"] >= years[0]) & (n["iso_aar"] <= years[1]) & (n["iso_uke"] <= W)]
+    q = n.groupby("iso_uke")["fyllingsgrad"].quantile(quantile).reindex(range(1, W + 1))
+    return q.interpolate().to_numpy() * smax
+
+
+def params_from_config(cfg: dict, min_fill: np.ndarray | None = None) -> Params:
+    risk = cfg.get("risk", {})
     return Params(
         smax=cfg["reservoir"]["capacity_gwh"],
         rmax=cfg["reservoir"]["max_release_gwh"],
@@ -36,6 +49,10 @@ def params_from_config(cfg: dict) -> Params:
         discount_rate=cfg["market"]["discount_rate"],
         n_storage=cfg["grid"]["n_storage"],
         n_release=cfg["grid"]["n_release"],
+        risk_weight=risk.get("cvar_weight", 0.0),
+        cvar_alpha=risk.get("cvar_alpha", 0.2),
+        min_fill_penalty=risk.get("min_fill_penalty", 0.0),
+        min_fill=min_fill,
     )
 
 
@@ -67,8 +84,9 @@ def start_storage(inflow: pd.DataFrame, year: int) -> float:
     return float(prev["storage_gwh"].iloc[-1])
 
 
-def run_year(cfg: dict, inflow: pd.DataFrame, market: pd.DataFrame, year: int) -> pd.DataFrame:
-    p = params_from_config(cfg)
+def run_year(cfg: dict, inflow: pd.DataFrame, market: pd.DataFrame, year: int,
+             min_fill: np.ndarray | None = None) -> pd.DataFrame:
+    p = params_from_config(cfg, min_fill)
     train = [y for y in cfg["scenarios"]["inflow_years"] if y != year]
     Q = inflow_matrix(inflow, train)
     price = _weeks(market, year, "price_de")
