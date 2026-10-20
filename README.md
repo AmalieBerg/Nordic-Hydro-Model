@@ -1,9 +1,11 @@
 # Nordic Hydro Model
 
-A simplified fundamental model of the NO2 (Southwest Norway) power market, built in two layers:
+A simplified fundamental model of the NO2 (Southwest Norway) power market, built in two layers, with a five-year price forecast on top:
 
 1. **Layer 1, weekly:** water values by stochastic dynamic programming for one aggregate reservoir, with market clearing against Germany over the interconnectors. It answers *what is water worth, and what will the area price be?*
 2. **Layer 2, hourly:** dispatch of a single plant within each week, with turbine capacity, pumping and a battery. It answers *what is extra flexibility worth for one asset?*
+
+On top of layer 1 sits a **five-year price fan** for NO2, run over ten historical inflow sequences for a given German price path.
 
 The split mirrors how Nordic hydro producers work: a medium-term model sets the value of water week by week, and a short-term model places that water in the hours that pay most. This repository is a learning-scale version of that structure, tested against what actually happened in 2020 to 2025.
 
@@ -43,6 +45,20 @@ The split mirrors how Nordic hydro producers work: a medium-term model sets the 
 These are **upper bounds** (see limitations). The ranking held in all three years.
 
 ![Valuation](results/fig_valuation.png)
+
+**Five-year forecast: the German price moves NO2 far more than hydrology does.** With German baseload at the EEX forward level (Cal-27 140 EUR/MWh, Cal-28 105, held flat after that), the median NO2 price is about 113 EUR/MWh in 2027 and about 89 from 2028. Across ten historical inflow sequences, the range is 100 to 121 in 2027, when the starting reservoir still matters, and about 87 to 93 from 2028. A German price 16 EUR lower moves NO2 by about 14 EUR, more than twice the hydrology range.
+
+| Year | German input | NO2 p10 | NO2 median | NO2 p90 |
+|---|---|---|---|---|
+| 2027 | 140.2 | 103.9 | 112.5 | 120.5 |
+| 2028 | 104.8 | 88.5 | 90.2 | 92.6 |
+| 2029 to 2031 | 104.8 | 87.2 | 89.0 | 92.0 |
+
+*EUR/MWh, yearly means. A second scenario with German prices at the 2025 level (89 EUR/MWh) gives a NO2 median of about 76.*
+
+![Price fan](results/fig_forecast_fan.png)
+
+![Scenarios](results/fig_forecast_scenarios.png)
 
 ---
 
@@ -116,6 +132,17 @@ subject to  weekly water budget, turbine and pump limits, battery state of charg
 
 The plant's weekly water is its share of NO2's release from the risk-averse layer 1 run, in proportion to turbine capacity (1,000 MW is about 11.7% of NO2). Every variant gets the same water, so any gain comes from timing, pumping or battery trading.
 
+### Five-year price fan (`src/nhm/forecast.py`)
+
+Water values are solved once over the whole 2027 to 2031 horizon, with a steady-state value at the end so the model does not empty the reservoir just because the horizon stops. The plan is then run through ten inflow paths, each five consecutive historical years (2016 to 2020, 2017 to 2021, and so on, wrapping round), so wet and dry years follow each other as they did in history.
+
+Inputs that are assumptions, not forecasts, all set in `config.toml`:
+
+* German price per year, with the weekly shape of 2023 to 2025
+* NO2 residual demand: the average weekly profile of 2023 to 2025
+* the cables in operation at the start of the horizon
+* starting filling: the median end-of-year filling 2016 to 2025
+
 ---
 
 ## Known limitations
@@ -134,6 +161,11 @@ Stated plainly, because they matter for how the numbers should be read.
 * NVE measures the largest reservoirs; ENTSO-E reports all production.
 * NVE applies today's reservoir capacity to the whole history.
 * A few negative weeks (5 of 611) come from timing differences between NVE and ENTSO-E.
+
+**Price fan**
+* It shows hydrology uncertainty only, so it is narrower than real uncertainty. The German price, demand and the weekly price shape are fixed for each scenario. From 2029 the yearly numbers repeat, because every year then sees the same inputs and the same set of inflow years.
+* The German forwards are a snapshot (Cal-27 and Cal-28 as reported on 9 October 2026); no liquid quotes were found for 2029 to 2031, so those years are held at the Cal-28 level. Update `config.toml` before each run.
+* No new cables, new demand (data centres, electrification, industry) or new generation in NO2 over the horizon.
 
 **Layer 2**
 * Upper bound: perfect price foresight within each week, no start-up costs, ramping limits or minimum flows.
@@ -159,11 +191,12 @@ python scripts/run_backtest.py
 python scripts/calibrate_risk.py        # optional, about a minute
 python scripts/export_hourly_prices.py
 python scripts/run_valuation.py
+python scripts/run_forecast.py
 
-python -m pytest -q                     # 16 tests
+python -m pytest -q                     # 18 tests
 ```
 
-All assumptions (reservoir size, cables, risk settings, plant and variants) live in `config.toml`, so a new scenario is a config change.
+All assumptions (reservoir size, cables, risk settings, plant and variants, German price scenarios) live in `config.toml`, so a new scenario is a config change.
 
 ## Repository layout
 
@@ -175,14 +208,16 @@ src/nhm/
   sdp.py                 layer 1: water values and simulation
   backtest.py            conditional backtest
   hourly.py              layer 2: hourly dispatch LP
+  forecast.py            five-year price fan
 scripts/                 data fetching, building and runs
-tests/                   16 tests: balances, water value behaviour, dispatch logic
+tests/                   18 tests: balances, water value behaviour, dispatch logic, fan
 results/                 tables and figures
 ```
 
 ## Next
 
-* A five-year NO2 price fan from simulated inflow years and a German price assumption.
+* German price uncertainty in the fan, for example from historical forward errors, alongside hydrology.
+* Demand growth and new cables as scenarios.
 * Extending inflow back to 1995 with older production statistics.
 * Adding spillage to layer 2, so turbine upgrades get credit for saved water.
 

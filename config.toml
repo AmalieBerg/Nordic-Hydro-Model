@@ -79,3 +79,22 @@ battery_mwh = 200.0
 
 [valuation]
 years = [2023, 2024, 2025]
+
+# Five-year price fan. German prices are an input, not a model output.
+# Cal-27 and Cal-28: EEX German baseload year futures as reported by
+# tacto.ai (closing 9 October 2026). No liquid quotes were found for
+# 2029 to 2031, so those years are held at the Cal-28 level. Update
+# these numbers before each run; they drive the level of the fan.
+[forecast]
+start_year = 2027
+years = 5
+start_fill_years = [2016, 2025]   # start from the median end-of-year filling in these years
+shape_years = [2023, 2024, 2025]  # weekly shape of German price and NO2 demand
+
+[[forecast.scenarios]]
+name = "German forwards (EEX, Oct 2026)"
+de_price = [140.2, 104.8, 104.8, 104.8, 104.8]
+
+[[forecast.scenarios]]
+name = "German at 2025 level"
+de_price = [89.2, 89.2, 89.2, 89.2, 89.2]
