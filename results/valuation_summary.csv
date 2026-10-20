@@ -1,0 +1,4 @@
+variant,gain_keur_per_year,min_year_keur,max_year_keur
+Turbine +200 MW,20155.0,18260.0,21368.0
+Pump 200 MW,6733.0,6193.0,7052.0
+Battery 100 MW / 200 MWh,3174.0,2792.0,3790.0

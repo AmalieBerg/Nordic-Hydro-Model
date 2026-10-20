@@ -54,3 +54,28 @@ cvar_alpha = 0.2            # tail share used when cvar_weight > 0
 min_fill_penalty = 100.0    # EUR/MWh per MWh below the curve
 min_fill_quantile = 0.05    # curve = 5th percentile of weekly filling ...
 min_fill_years = [1995, 2015]  # ... in NVE history before the scenario years
+
+# Layer 2: the plant valued hour by hour. It gets a share of NO2's weekly
+# reservoir release from layer 1, in proportion to its turbine capacity.
+[plant]
+name = "Representative NO2 plant"
+turbine_mw = 1000.0
+pump_efficiency = 0.75
+battery_roundtrip = 0.88
+
+# Each variant is compared with the base plant above.
+[[variants]]
+name = "Turbine +200 MW"
+turbine_mw = 1200.0
+
+[[variants]]
+name = "Pump 200 MW"
+pump_mw = 200.0
+
+[[variants]]
+name = "Battery 100 MW / 200 MWh"
+battery_mw = 100.0
+battery_mwh = 200.0
+
+[valuation]
+years = [2023, 2024, 2025]
